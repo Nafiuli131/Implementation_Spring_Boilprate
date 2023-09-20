@@ -1,13 +1,17 @@
 package com.example.spring_project.security.helper;
 
+import com.example.spring_project.exception.BadExceptionHandler;
 import com.example.spring_project.security.entity.Role;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
+import javax.servlet.http.HttpServletRequest;
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
@@ -64,5 +68,24 @@ public class JwtTokenUtil {
 
     private Date getExpirationDateFromToken(String token) {
         return getClaimFromToken(token, Claims::getExpiration);
+    }
+
+    public String extractTokenFromRequest(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7); // Remove "Bearer " prefix
+        }
+        return null;
+    }
+
+    public Claims extractUserId(String jwtToken) {
+        try {
+            return Jwts.parser()
+                    .setSigningKey(jwtSecretKey)
+                    .parseClaimsJws(jwtToken)
+                    .getBody(); // Extract the user ID from claims
+        } catch (SignatureException e) {
+            throw new BadExceptionHandler("Invalid JWT token");
+        }
     }
 }
